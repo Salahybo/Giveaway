@@ -1,6 +1,6 @@
  Spin to Win - Salahybo
 
-Land on a Secret, God, or OG To Win 2 Thousand Robux And a Free 200mil Tang Tang Keletang in Roblox Steal a Brainrot
+Land on a Secret, God, or OG To Win 2 Thousand Robux And a Free 600mil Pavonero  (St Patrick's trait) in Roblox Steal a Brainrot
 
 Chances:
 
@@ -14,5 +14,3 @@ Chances:
  God       ⬜  0.04%  
  OG        🐘  0.01%  
 
-
-Salahybo
